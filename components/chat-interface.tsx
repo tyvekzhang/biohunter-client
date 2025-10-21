@@ -209,7 +209,15 @@ export function ChatInterface({
           <div className="w-full max-w-4xl space-y-8">
             <div className="text-center space-y-4">
               <h1 className="text-4xl font-bold text-foreground">
-                {isEnglish ? "BioHunter" : "BioHunter"}
+                {"BioHunter".split("").map((char, i) =>
+                  i === 3 ? (
+                    <span key={i} className="border-b-3 border-primary">
+                      {char}
+                    </span>
+                  ) : (
+                    char
+                  )
+                )}
               </h1>
               <p className="text-lg text-muted-foreground">
                 {isEnglish
@@ -262,12 +270,10 @@ export function ChatInterface({
                 <Button
                   variant={webSearchEnabled ? "default" : "ghost"}
                   size="sm"
-                  className={`absolute bottom-2 left-2 flex items-center gap-1 px-2 py-2 cursor-pointer ${
-                    isStreaming ? "cursor-not-allowed opacity-50" : ""
-                  } ${
-                    webSearchEnabled &&
+                  className={`absolute bottom-2 left-2 flex items-center gap-1 px-2 py-2 cursor-pointer ${isStreaming ? "cursor-not-allowed opacity-50" : ""
+                    } ${webSearchEnabled &&
                     "bg-primary/10 text-primary hover:bg-primary/10"
-                  }`}
+                    }`}
                   onClick={() => setWebSearchEnabled(!webSearchEnabled)}
                   disabled={isStreaming}
                 >
@@ -282,9 +288,8 @@ export function ChatInterface({
                   <Button
                     variant="ghost"
                     size="icon"
-                    className={`cursor-pointer ${
-                      isStreaming ? "cursor-not-allowed opacity-50" : ""
-                    }`}
+                    className={`cursor-pointer ${isStreaming ? "cursor-not-allowed opacity-50" : ""
+                      }`}
                     onClick={() => setShowFileUpload(true)}
                     disabled={isStreaming}
                   >
@@ -341,16 +346,14 @@ export function ChatInterface({
               {mockMessages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-4 ${
-                    message.type === "user" ? "justify-end" : "justify-start"
-                  }`}
+                  className={`flex gap-4 ${message.type === "user" ? "justify-end" : "justify-start"
+                    }`}
                 >
                   <div
-                    className={`max-w-[70%] rounded-lg px-4 py-3 ${
-                      message.type === "user"
+                    className={`max-w-[70%] rounded-lg px-4 py-3 ${message.type === "user"
                         ? "bg-primary/10 text-gray-900"
                         : "bg-gray-100 text-gray-900"
-                    }`}
+                      }`}
                   >
                     <div className="whitespace-pre-wrap text-sm leading-relaxed">
                       {message.content}
@@ -416,8 +419,8 @@ export function ChatInterface({
                         ? "Responding..."
                         : "响应中..."
                       : isEnglish
-                      ? "Continue conversation..."
-                      : "继续对话..."
+                        ? "Continue conversation..."
+                        : "继续对话..."
                   }
                   className="h-[100px] pr-20 pb-12 resize-none overflow-y-auto"
                 />
@@ -426,12 +429,10 @@ export function ChatInterface({
                 <Button
                   variant={webSearchEnabled ? "default" : "ghost"}
                   size="sm"
-                  className={`absolute bottom-2 left-2 flex items-center gap-1 px-2 py-1 cursor-pointer ${
-                    isStreaming ? "cursor-not-allowed" : ""
-                  } ${
-                    webSearchEnabled &&
+                  className={`absolute bottom-2 left-2 flex items-center gap-1 px-2 py-1 cursor-pointer ${isStreaming ? "cursor-not-allowed" : ""
+                    } ${webSearchEnabled &&
                     "bg-primary/10 text-primary hover:bg-primary/10"
-                  }`}
+                    }`}
                   onClick={() => setWebSearchEnabled(!webSearchEnabled)}
                 >
                   <Globe className="h-4 w-4" />
@@ -447,9 +448,8 @@ export function ChatInterface({
                     size="sm"
                     onClick={() => setShowFileUpload(true)}
                     disabled={isStreaming}
-                    className={`${
-                      isStreaming ? "cursor-not-allowed" : "cursor-pointer"
-                    }`}
+                    className={`${isStreaming ? "cursor-not-allowed" : "cursor-pointer"
+                      }`}
                   >
                     <Paperclip className="h-4 w-4" />
                   </Button>
