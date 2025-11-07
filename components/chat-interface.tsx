@@ -1,107 +1,138 @@
-"use client";
+"use client"
 
-import { FileUpload } from "@/components/file-upload";
-import type React from "react";
+import { FileUpload } from "@/components/file-upload"
+import { SteppedFileUpload } from "@/components/stepped-file-upload"
+import type React from "react"
+import type { ConversationMessage } from "@/types/chat"
 
-import { QuickStartTemplates } from "@/components/quick-start-templates";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Button } from "@/components/ui/button";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Textarea } from "@/components/ui/textarea";
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
-import { useAgentManager } from "@/hooks/use-agent-manager";
-import { useConversationHistory } from "@/hooks/use-conversation-history";
-import { useIsEnglish } from "@/hooks/use-is-english";
-import { useSSEStream } from "@/hooks/use-sse-stream";
-import type { Conversation } from "@/types/chat";
-import {
-  Bot,
-  Globe,
-  Loader2,
-  Paperclip,
-  Send,
-  Square,
-  User,
-} from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import workflowData from "@/data/example-workflow.json";
+import { QuickStartTemplates } from "@/components/quick-start-templates"
+import { Avatar, AvatarFallback } from "@/components/ui/avatar"
+import { Button } from "@/components/ui/button"
+import { ScrollArea } from "@/components/ui/scroll-area"
+import { Textarea } from "@/components/ui/textarea"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useAgentManager } from "@/hooks/use-agent-manager"
+import { useConversationHistory } from "@/hooks/use-conversation-history"
+import { useIsEnglish } from "@/hooks/use-is-english"
+import { useSSEStream } from "@/hooks/use-sse-stream"
+import type { Conversation } from "@/types/chat"
+import { Bot, Loader2, Paperclip, Send, Square, User, Zap, Shield, Target, CheckCircle2 } from "lucide-react"
+import { useEffect, useRef, useState } from "react"
+import workflowData from "@/data/example-workflow.json"
 
-import { Message } from "@/types/chat";
-import { AgentWorkflowDisplay } from "./agent-workflow-display";
+import type { Message } from "@/types/chat"
+import { AgentWorkflowDisplay } from "./agent-workflow-display"
+
+const PUBMED_QUERY = `(
+(
+"drug target*"[Title/Abstract] OR
+"therapeutic target*"[Title/Abstract] OR
+"molecular target*"[Title/Abstract] OR
+"targetable molecule*"[Title/Abstract] OR
+"target identification"[Title/Abstract]
+)
+OR
+(
+"CAR-T"[Title/Abstract] OR
+"chimeric antigen receptor"[Title/Abstract]
+)
+)
+AND
+(
+"surface"[Title/Abstract] OR
+"membrane"[Title/Abstract] OR
+"cell surface"[Title/Abstract] OR
+"transmembrane"[Title/Abstract] OR
+"surface protein*"[Title/Abstract] OR
+"surface antigen*"[Title/Abstract] OR
+"membrane protein*"[Title/Abstract] OR
+"membrane antigen*"[Title/Abstract] OR
+"CD"[Title/Abstract]
+)
+NOT
+(
+"intracellular"[Title/Abstract] OR
+"cytoplasmic"[Title/Abstract]
+)`
 
 interface ChatMainProps {
-  conversation: Conversation | undefined;
-  onAddMessage: (conversationId: string, message: Message) => void;
-  onCreateConversation: () => string;
+  conversation: Conversation | undefined
+  onAddMessage: (conversationId: string, message: Message) => void
+  onCreateConversation: () => string
 }
 
-export function ChatInterface({
-  conversation,
-  onAddMessage,
-  onCreateConversation,
-}: ChatMainProps) {
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [input, setInput] = useState("");
-  const [showFileUpload, setShowFileUpload] = useState(false);
-  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
-  const [webSearchEnabled, setWebSearchEnabled] = useState(true);
-  const scrollAreaRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+export function ChatInterface({ conversation, onAddMessage, onCreateConversation }: ChatMainProps) {
+  const [messages, setMessages] = useState<Message[]>([])
+  const [input, setInput] = useState("")
+  const [showFileUpload, setShowFileUpload] = useState(false)
+  const [showSteppedUpload, setShowSteppedUpload] = useState(false)
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([])
+  const [webSearchEnabled, setWebSearchEnabled] = useState(true)
+  const [activeTab, setActiveTab] = useState("pubmed")
+  const scrollAreaRef = useRef<HTMLDivElement>(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
+  const [toggledOptions, setToggledOptions] = useState<{
+    cellSurface: boolean
+    tcellCompat: boolean
+    offtarget: boolean
+    fdaSafety: boolean
+  }>({
+    cellSurface: true,
+    tcellCompat: true,
+    offtarget: true,
+    fdaSafety: true,
+  })
 
-  const { workflows, getActiveWorkflow } = useAgentManager();
-  const {
-    isStreaming,
-    streamingMessages,
-    error,
-    startStream,
-    stopStream,
-    clearMessages,
-  } = useSSEStream();
-  const {
-    currentConversationId,
-    getCurrentConversation,
-    createConversation,
-    addMessageToConversation,
-  } = useConversationHistory();
+  const { workflows, getActiveWorkflow } = useAgentManager()
+  const { isStreaming, streamingMessages, error, startStream, stopStream, clearMessages } = useSSEStream()
+  const { currentConversationId, getCurrentConversation, createConversation, addMessageToConversation } =
+    useConversationHistory()
 
-  const hasMessages = messages.length > 0 || streamingMessages.length > 0;
-  const activeWorkflow = getActiveWorkflow();
-  const currentConversation = getCurrentConversation();
+  const hasMessages = messages.length > 0 || streamingMessages.length > 0
+  const activeWorkflow = getActiveWorkflow()
+  const currentConversation = getCurrentConversation()
 
-  const isEnglish = useIsEnglish();
+  const isEnglish = useIsEnglish()
+
+  useEffect(() => {
+    if (activeTab === "pubmed") {
+      setInput(PUBMED_QUERY)
+    } else {
+      setInput("")
+    }
+  }, [activeTab])
 
   useEffect(() => {
     if (scrollAreaRef.current) {
-      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight;
+      scrollAreaRef.current.scrollTop = scrollAreaRef.current.scrollHeight
     }
-  }, [messages, streamingMessages]);
+  }, [messages, streamingMessages])
 
   const handleTemplateSelect = (template: string) => {
-    setInput(template);
+    setInput(template)
     if (textareaRef.current) {
-      textareaRef.current.focus();
+      textareaRef.current.focus()
     }
-  };
+  }
 
   const handleSend = async () => {
-    if (!input.trim() && uploadedFiles.length === 0) return;
-    if (isStreaming) return;
+    if (!input.trim() && uploadedFiles.length === 0) return
+    if (isStreaming) return
+
+    const tabLabel = activeTab === "pubmed" ? "通过pubmed指令提取" : "单细胞数据提取"
+    const fullContent = `[${tabLabel}] ${input}`
 
     const userMessage: Message = {
       id: Date.now().toString(),
       type: "user",
-      content: input,
+      content: fullContent,
       timestamp: new Date(),
       files: uploadedFiles.length > 0 ? [...uploadedFiles] : undefined,
-    };
+    }
 
     // Create new conversation if none exists
-    let conversationId = currentConversationId;
+    let conversationId = currentConversationId
     if (!conversationId) {
       const conversation = createConversation(undefined, {
         id: userMessage.id,
@@ -109,8 +140,8 @@ export function ChatInterface({
         content: userMessage.content,
         timestamp: userMessage.timestamp,
         files: userMessage.files,
-      });
-      conversationId = conversation.id;
+      })
+      conversationId = conversation.id
     } else {
       // Add message to existing conversation
       addMessageToConversation(conversationId, {
@@ -119,27 +150,25 @@ export function ChatInterface({
         content: userMessage.content,
         timestamp: userMessage.timestamp,
         files: userMessage.files,
-      });
+      })
     }
 
-    setMessages((prev) => [...prev, userMessage]);
-    const messageContent = input;
-    setInput("");
-    setUploadedFiles([]);
+    setMessages((prev) => [...prev, userMessage])
+    const messageContent = input
+    setInput("")
+    setUploadedFiles([])
 
     try {
-      await startStream(messageContent, uploadedFiles, webSearchEnabled);
+      await startStream(messageContent, uploadedFiles, webSearchEnabled)
     } catch (error) {
-      console.error("Failed to start stream:", error);
+      console.error("Failed to start stream:", error)
     }
-  };
+  }
 
   useEffect(() => {
     streamingMessages.forEach((streamMsg) => {
       if (!streamMsg.isStreaming && currentConversationId) {
-        const existingMessage = messages.find(
-          (msg) => msg.id === `stream-${streamMsg.id}`
-        );
+        const existingMessage = messages.find((msg) => msg.id === `stream-${streamMsg.id}`)
         if (!existingMessage) {
           const agentMessage: ConversationMessage = {
             id: `stream-${streamMsg.id}`,
@@ -147,9 +176,9 @@ export function ChatInterface({
             content: streamMsg.content,
             agent: streamMsg.agent,
             timestamp: streamMsg.timestamp,
-          };
+          }
 
-          addMessageToConversation(currentConversationId, agentMessage);
+          addMessageToConversation(currentConversationId, agentMessage)
 
           setMessages((prev) => [
             ...prev,
@@ -157,40 +186,49 @@ export function ChatInterface({
               ...agentMessage,
               files: undefined,
             },
-          ]);
+          ])
         }
       }
-    });
-  }, [
-    streamingMessages,
-    currentConversationId,
-    messages,
-    addMessageToConversation,
-  ]);
+    })
+  }, [streamingMessages, currentConversationId, messages, addMessageToConversation])
 
   const handleStop = () => {
-    stopStream();
-  };
+    stopStream()
+  }
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
     if (e.key === "Enter" && !e.shiftKey) {
-      e.preventDefault();
+      e.preventDefault()
       if (isStreaming) {
-        handleStop();
+        handleStop()
       } else {
-        handleSend();
+        handleSend()
       }
     }
-  };
+  }
 
   const handleFileUpload = (files: File[]) => {
-    setUploadedFiles((prev) => [...prev, ...files]);
-    setShowFileUpload(false);
-  };
+    setUploadedFiles((prev) => [...prev, ...files])
+    setShowFileUpload(false)
+  }
+
+  const handleSteppedUploadComplete = (negativeFile: File, positiveFile: File, cellType: string) => {
+    setUploadedFiles([negativeFile, positiveFile])
+    // Automatically set input with cell type information
+    setInput(`Target cell type: ${cellType}`)
+    setShowSteppedUpload(false)
+  }
 
   const removeFile = (index: number) => {
-    setUploadedFiles((prev) => prev.filter((_, i) => i !== index));
-  };
+    setUploadedFiles((prev) => prev.filter((_, i) => i !== index))
+  }
+
+  const handleToggleOption = (option: string) => {
+    setToggledOptions((prev) => ({
+      ...prev,
+      [option]: !prev[option as keyof typeof prev],
+    }))
+  }
 
   const [mockMessages, setMockMessages] = useState<Message[]>([
     {
@@ -200,7 +238,8 @@ export function ChatInterface({
         "I need to discover CAR-T targets for triple-negative breast cancer. Please help me analyze relevant single-cell data, identify tumor-specific surface antigens, and evaluate target safety and efficacy.",
       timestamp: new Date(),
     },
-  ]);
+  ])
+
   return (
     <div className="flex flex-col min-h-screen max-h-screen relative">
       {/* Welcome state - centered input */}
@@ -216,7 +255,7 @@ export function ChatInterface({
                     </span>
                   ) : (
                     char
-                  )
+                  ),
                 )}
               </h1>
               <p className="text-lg text-muted-foreground">
@@ -226,24 +265,21 @@ export function ChatInterface({
               </p>
             </div>
 
-            <div className="space-y-4">
+            <div className="space-y-1">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="pubmed">{isEnglish ? "PubMed Extraction" : "通过pubmed指令提取"}</TabsTrigger>
+                  <TabsTrigger value="single-cell">{isEnglish ? "Single-Cell Data" : "单细胞数据提取"}</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
               {uploadedFiles.length > 0 && (
                 <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    {isEnglish ? "Uploaded files:" : "已上传文件:"}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{isEnglish ? "Uploaded files:" : "已上传文件:"}</p>
                   {uploadedFiles.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between bg-muted p-2 rounded"
-                    >
+                    <div key={index} className="flex items-center justify-between bg-muted p-2 rounded">
                       <span className="text-sm">{file.name}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                        className="cursor-pointer"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => removeFile(index)} className="cursor-pointer">
                         ×
                       </Button>
                     </div>
@@ -257,53 +293,108 @@ export function ChatInterface({
                   value={input}
                   onChange={(e) => setInput(e.target.value)}
                   onKeyDown={handleKeyPress}
-                  placeholder={
-                    isEnglish
-                      ? "Enter your question or request..."
-                      : "请输入您的问题或需求..."
-                  }
+                  placeholder={isEnglish ? "Enter your question or request..." : "请输入您的问题或需求..."}
                   className="h-[120px] pr-20 pb-12 resize-none overflow-y-auto"
                   disabled={isStreaming}
                 />
 
-                {/* Left bottom corner - Search */}
-                <Button
-                  variant={webSearchEnabled ? "default" : "ghost"}
-                  size="sm"
-                  className={`absolute bottom-2 left-2 flex items-center gap-1 px-2 py-2 cursor-pointer ${isStreaming ? "cursor-not-allowed opacity-50" : ""
-                    } ${webSearchEnabled &&
-                    "bg-primary/10 text-primary hover:bg-primary/10"
-                    }`}
-                  onClick={() => setWebSearchEnabled(!webSearchEnabled)}
-                  disabled={isStreaming}
-                >
-                  <Globe className="h-4 w-4" />
-                  <span className="text-xs">
-                    {isEnglish ? "Search" : "搜索"}
-                  </span>
-                </Button>
+                {activeTab === "single-cell" && (
+                  <div className="absolute bottom-2 left-2 flex gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={toggledOptions.cellSurface ? "default" : "outline"}
+                            size="sm"
+                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.cellSurface ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
+                            onClick={() => handleToggleOption("cellSurface")}
+                            disabled={isStreaming}
+                          >
+                            <Target className="h-3.5 w-3.5 mr-1" />
+                            {isEnglish ? "Cell Surface" : "细胞表面基因"}
+                          </Button>
+                        </TooltipTrigger>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={toggledOptions.tcellCompat ? "default" : "outline"}
+                            size="sm"
+                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.tcellCompat ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
+                            onClick={() => handleToggleOption("tcellCompat")}
+                            disabled={isStreaming}
+                          >
+                            <Shield className="h-3.5 w-3.5 mr-1" />
+                            {isEnglish ? "T Cell" : "T细胞兼容"}
+                          </Button>
+                        </TooltipTrigger>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={toggledOptions.offtarget ? "default" : "outline"}
+                            size="sm"
+                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.offtarget ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
+                            onClick={() => handleToggleOption("offtarget")}
+                            disabled={isStreaming}
+                          >
+                            <Zap className="h-3.5 w-3.5 mr-1" />
+                            {isEnglish ? "Off-target" : "脱靶规避"}
+                          </Button>
+                        </TooltipTrigger>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={toggledOptions.fdaSafety ? "default" : "outline"}
+                            size="sm"
+                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.fdaSafety ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
+                            onClick={() => handleToggleOption("fdaSafety")}
+                            disabled={isStreaming}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                            {isEnglish ? "FDA" : "FDA安全"}
+                          </Button>
+                        </TooltipTrigger>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                )}
 
                 {/* Right bottom corner - File upload and Send */}
                 <div className="absolute bottom-2 right-2 flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className={`cursor-pointer ${isStreaming ? "cursor-not-allowed opacity-50" : ""
-                      }`}
-                    onClick={() => setShowFileUpload(true)}
-                    disabled={isStreaming}
-                  >
-                    <Paperclip className="h-4 w-4" />
-                  </Button>
+                  {activeTab === "single-cell" && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className={`cursor-pointer ${isStreaming ? "cursor-not-allowed opacity-50" : ""}`}
+                      onClick={() => {
+                        if (activeTab === "single-cell") {
+                          setShowSteppedUpload(true)
+                        } else {
+                          setShowFileUpload(true)
+                        }
+                      }}
+                      disabled={isStreaming}
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </Button>
+                  )}
                   <TooltipProvider>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <Button
                           onClick={handleSend}
-                          disabled={
-                            isStreaming ||
-                            (!input.trim() && uploadedFiles.length === 0)
-                          }
+                          disabled={isStreaming || (!input.trim() && uploadedFiles.length === 0)}
                           size="sm"
                           className="cursor-pointer"
                         >
@@ -314,9 +405,7 @@ export function ChatInterface({
                           )}
                         </Button>
                       </TooltipTrigger>
-                      <TooltipContent side="top">
-                        {isEnglish ? "Send" : "发送"}
-                      </TooltipContent>
+                      <TooltipContent side="top">{isEnglish ? "Send" : "发送"}</TooltipContent>
                     </Tooltip>
                   </TooltipProvider>
                 </div>
@@ -331,13 +420,6 @@ export function ChatInterface({
       {hasMessages && (
         <>
           {/* Messages area */}
-          {/* <ScrollArea
-            ref={scrollAreaRef}
-            className="flex-1 max-h-6/7 overflow-auto max-w-4xl min-w-4xl mx-auto mt-14"
-          >
-            <AgentWorkflowDisplay workflowData={workflowData} />
-            <div className="h-2 mt-[100px]"></div>
-          </ScrollArea> */}
           <ScrollArea
             ref={scrollAreaRef}
             className="flex-1 max-h-6/7 overflow-auto max-w-4xl min-w-4xl mx-auto mt-14 px-2"
@@ -346,18 +428,14 @@ export function ChatInterface({
               {mockMessages.map((message) => (
                 <div
                   key={message.id}
-                  className={`flex gap-4 ${message.type === "user" ? "justify-end" : "justify-start"
-                    }`}
+                  className={`flex gap-4 ${message.type === "user" ? "justify-end" : "justify-start"}`}
                 >
                   <div
-                    className={`max-w-[70%] rounded-lg px-4 py-3 ${message.type === "user"
-                        ? "bg-primary/10 text-gray-900"
-                        : "bg-gray-100 text-gray-900"
-                      }`}
+                    className={`max-w-[70%] rounded-lg px-4 py-3 ${
+                      message.type === "user" ? "bg-primary/10 text-gray-900" : "bg-gray-100 text-gray-900"
+                    }`}
                   >
-                    <div className="whitespace-pre-wrap text-sm leading-relaxed">
-                      {message.content}
-                    </div>
+                    <div className="whitespace-pre-wrap text-sm leading-relaxed">{message.content}</div>
                   </div>
 
                   {message.type === "user" && (
@@ -384,23 +462,20 @@ export function ChatInterface({
           {/* Bottom input */}
           <div className="mt-4 px-12 bg-white w-full mx-auto absolute bottom-0">
             <div className="max-w-4xl mx-auto py-4">
+              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-4">
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="pubmed">{isEnglish ? "PubMed Extraction" : "通过pubmed指令提取"}</TabsTrigger>
+                  <TabsTrigger value="single-cell">{isEnglish ? "Single-Cell Data" : "单细胞数据提取"}</TabsTrigger>
+                </TabsList>
+              </Tabs>
+
               {uploadedFiles.length > 0 && (
                 <div className="mb-4 space-y-2">
-                  <p className="text-sm text-muted-foreground">
-                    {isEnglish ? "Uploaded files:" : "已上传文件:"}
-                  </p>
+                  <p className="text-sm text-muted-foreground">{isEnglish ? "Uploaded files:" : "已上传文件:"}</p>
                   {uploadedFiles.map((file, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center justify-between bg-muted p-2 rounded"
-                    >
+                    <div key={index} className="flex items-center justify-between bg-muted p-2 rounded">
                       <span className="text-sm">{file.name}</span>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={() => removeFile(index)}
-                        className="cursor-pointer"
-                      >
+                      <Button variant="ghost" size="sm" onClick={() => removeFile(index)} className="cursor-pointer">
                         ×
                       </Button>
                     </div>
@@ -425,34 +500,97 @@ export function ChatInterface({
                   className="h-[100px] pr-20 pb-12 resize-none overflow-y-auto"
                 />
 
-                {/* Left bottom corner - Search */}
-                <Button
-                  variant={webSearchEnabled ? "default" : "ghost"}
-                  size="sm"
-                  className={`absolute bottom-2 left-2 flex items-center gap-1 px-2 py-1 cursor-pointer ${isStreaming ? "cursor-not-allowed" : ""
-                    } ${webSearchEnabled &&
-                    "bg-primary/10 text-primary hover:bg-primary/10"
-                    }`}
-                  onClick={() => setWebSearchEnabled(!webSearchEnabled)}
-                >
-                  <Globe className="h-4 w-4" />
-                  <span className="text-xs">
-                    {isEnglish ? "Search" : "搜索"}
-                  </span>
-                </Button>
+                {activeTab === "single-cell" && (
+                  <div className="absolute bottom-2 left-2 flex gap-2">
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={toggledOptions.cellSurface ? "default" : "outline"}
+                            size="sm"
+                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.cellSurface ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
+                            onClick={() => handleToggleOption("cellSurface")}
+                            disabled={isStreaming}
+                          >
+                            <Target className="h-3.5 w-3.5 mr-1" />
+                            {isEnglish ? "Cell Surface" : "细胞表面基因"}
+                          </Button>
+                        </TooltipTrigger>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={toggledOptions.tcellCompat ? "default" : "outline"}
+                            size="sm"
+                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.tcellCompat ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
+                            onClick={() => handleToggleOption("tcellCompat")}
+                            disabled={isStreaming}
+                          >
+                            <Shield className="h-3.5 w-3.5 mr-1" />
+                            {isEnglish ? "T Cell" : "T细胞兼容"}
+                          </Button>
+                        </TooltipTrigger>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={toggledOptions.offtarget ? "default" : "outline"}
+                            size="sm"
+                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.offtarget ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
+                            onClick={() => handleToggleOption("offtarget")}
+                            disabled={isStreaming}
+                          >
+                            <Zap className="h-3.5 w-3.5 mr-1" />
+                            {isEnglish ? "Off-target" : "脱靶规避"}
+                          </Button>
+                        </TooltipTrigger>
+                      </Tooltip>
+                    </TooltipProvider>
+
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <Button
+                            variant={toggledOptions.fdaSafety ? "default" : "outline"}
+                            size="sm"
+                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.fdaSafety ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
+                            onClick={() => handleToggleOption("fdaSafety")}
+                            disabled={isStreaming}
+                          >
+                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                            {isEnglish ? "FDA" : "FDA安全"}
+                          </Button>
+                        </TooltipTrigger>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
+                )}
 
                 {/* Right bottom corner - File upload and Send/Stop */}
                 <div className="absolute bottom-2 right-2 flex gap-2">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setShowFileUpload(true)}
-                    disabled={isStreaming}
-                    className={`${isStreaming ? "cursor-not-allowed" : "cursor-pointer"
-                      }`}
-                  >
-                    <Paperclip className="h-4 w-4" />
-                  </Button>
+                  {activeTab === "single-cell" && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => {
+                        if (activeTab === "single-cell") {
+                          setShowSteppedUpload(true)
+                        } else {
+                          setShowFileUpload(true)
+                        }
+                      }}
+                      disabled={isStreaming}
+                      className={`${isStreaming ? "cursor-not-allowed" : "cursor-pointer"}`}
+                    >
+                      <Paperclip className="h-4 w-4" />
+                    </Button>
+                  )}
 
                   {isStreaming ? (
                     <TooltipProvider>
@@ -467,9 +605,7 @@ export function ChatInterface({
                             <Square className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="top">
-                          {isEnglish ? "Stop" : "停止"}
-                        </TooltipContent>
+                        <TooltipContent side="top">{isEnglish ? "Stop" : "停止"}</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   ) : (
@@ -478,18 +614,14 @@ export function ChatInterface({
                         <TooltipTrigger asChild>
                           <Button
                             onClick={handleSend}
-                            disabled={
-                              !input.trim() && uploadedFiles.length === 0
-                            }
+                            disabled={!input.trim() && uploadedFiles.length === 0}
                             size="sm"
                             className={"cursor-pointer"}
                           >
                             <Send className="h-4 w-4" />
                           </Button>
                         </TooltipTrigger>
-                        <TooltipContent side="top">
-                          {isEnglish ? "Send" : "发送"}
-                        </TooltipContent>
+                        <TooltipContent side="top">{isEnglish ? "Send" : "发送"}</TooltipContent>
                       </Tooltip>
                     </TooltipProvider>
                   )}
@@ -501,12 +633,11 @@ export function ChatInterface({
       )}
 
       {/* File upload modal */}
-      {showFileUpload && (
-        <FileUpload
-          onUpload={handleFileUpload}
-          onClose={() => setShowFileUpload(false)}
-        />
+      {showFileUpload && <FileUpload onUpload={handleFileUpload} onClose={() => setShowFileUpload(false)} />}
+
+      {showSteppedUpload && (
+        <SteppedFileUpload onComplete={handleSteppedUploadComplete} onClose={() => setShowSteppedUpload(false)} />
       )}
     </div>
-  );
+  )
 }
