@@ -1,21 +1,24 @@
-"use client"
+"use client";
 
-import { useEffect, useState } from "react"
-import { ChatInterface } from "@/components/chat-interface"
-import { Sidebar } from "@/components/sidebar"
-import { Button } from "@/components/ui/button"
-import { PanelLeftOpen, Plus } from "lucide-react"
-import { useIsEnglish } from "@/hooks/use-is-english"
-import FingerprintJS from "@fingerprintjs/fingerprintjs"
-import { useConversationHistory } from "@/hooks/use-conversation-history"
+import { useEffect, useState } from "react";
+import { ChatInterface } from "@/components/chat-interface";
+import { Sidebar } from "@/components/sidebar";
+import { Button } from "@/components/ui/button";
+import { PanelLeftOpen, Plus } from "lucide-react";
+import { useIsEnglish } from "@/hooks/use-is-english";
+import FingerprintJS from "@fingerprintjs/fingerprintjs";
+import { useConversationHistory } from "@/hooks/use-conversation-history";
+import { APP_CONFIG } from "@/config";
+import { OAuth2PasswordRequestForm, UserCredential } from '@/types/auth';
+import { signIn } from "@/service/auth";
 
 export default function HomePage() {
-  const isEnglish = useIsEnglish()
-  const [sidebarOpen, setSidebarOpen] = useState(true)
+  const isEnglish = useIsEnglish();
+  const [sidebarOpen, setSidebarOpen] = useState(true);
 
   const handleToggleSidebar = () => {
-    setSidebarOpen(!sidebarOpen)
-  }
+    setSidebarOpen(!sidebarOpen);
+  };
 
   const {
     conversations,
@@ -33,36 +36,43 @@ export default function HomePage() {
     getConversationStats,
     setCurrentConversationId,
     loadDemoData, // Export the new loadDemoData function
-  } = useConversationHistory()
-
-  const [userId, setUserId] = useState<string>("")
+  } = useConversationHistory();
 
   useEffect(() => {
-    let _userId = localStorage.getItem("fingerprint")
-
-    if (_userId === null) {
+    const authStorage = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.AUTH);
+    if (authStorage === null || authStorage === undefined) {
       FingerprintJS.load()
         .then((fp) => fp.get())
         .then((result) => {
-          _userId = result.visitorId
-          localStorage.setItem("fingerprint", _userId)
-          setUserId(_userId)
+          const fingerprint = result.visitorId;
+          const loginData: OAuth2PasswordRequestForm = {
+            username: fingerprint,
+            password: ""
+          }
+          signIn(loginData).then(res => localStorage.setItem(APP_CONFIG.STORAGE_KEYS.AUTH, res.access_token))
         })
         .catch((error) => {
-          console.error("Failed to get fingerprint:", error)
-          setUserId("unknown-user")
-        })
-    } else {
-      setUserId(_userId)
+          console.error("Failed to get fingerprint:", error);
+        });
     }
-  }, [])
+  }, []);
+
+  useEffect(() => {
+    const conversationId = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.CONCERSATION_ID);
+    if (conversationId === null || conversationId === undefined) {
+      
+    }
+  })
 
   return (
     <div className="flex h-screen bg-background">
       {!sidebarOpen && (
         <div className="fixed top-4 left-4 z-50 flex flex-col gap-3 h-screen">
           {/* Website Logo */}
-          <div className="flex items-center justify-center cursor-pointer hover:bg-gray-100 scale-120 text-gray-600 hover:text-gray-700 p-1"  onClick={handleToggleSidebar}>
+          <div
+            className="flex items-center justify-center cursor-pointer hover:bg-gray-100 scale-120 text-gray-600 hover:text-gray-700 p-1"
+            onClick={handleToggleSidebar}
+          >
             <img src="/favicon.ico" alt="Logo" className="h-6 w-6" />
           </div>
 
@@ -127,5 +137,5 @@ export default function HomePage() {
         />
       </div>
     </div>
-  )
+  );
 }

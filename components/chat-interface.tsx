@@ -1,6 +1,7 @@
 "use client"
 
 import { FileUpload } from "@/components/file-upload"
+import { File } from 'lucide-react'
 import { SteppedFileUpload } from "@/components/stepped-file-upload"
 import type React from "react"
 import type { ConversationMessage } from "@/types/chat"
@@ -17,7 +18,7 @@ import { useConversationHistory } from "@/hooks/use-conversation-history"
 import { useIsEnglish } from "@/hooks/use-is-english"
 import { useSSEStream } from "@/hooks/use-sse-stream"
 import type { Conversation } from "@/types/chat"
-import { Bot, Loader2, Paperclip, Send, Square, User, Zap, Shield, Target, CheckCircle2 } from "lucide-react"
+import { Bot, Loader2, Paperclip, Send, Square, User, Zap, Shield, Target, CheckCircle2 } from 'lucide-react'
 import { useEffect, useRef, useState } from "react"
 import workflowData from "@/data/example-workflow.json"
 
@@ -226,7 +227,7 @@ export function ChatInterface({ conversation, onAddMessage, onCreateConversation
   const handleToggleOption = (option: string) => {
     setToggledOptions((prev) => ({
       ...prev,
-      [option]: !prev[option as keyof typeof prev],
+      [option as keyof typeof prev]: !prev[option as keyof typeof prev],
     }))
   }
 
@@ -239,6 +240,161 @@ export function ChatInterface({ conversation, onAddMessage, onCreateConversation
       timestamp: new Date(),
     },
   ])
+
+  const InputSection = ({ showOptionsButtons = false }: { showOptionsButtons?: boolean }) => (
+    <div className="space-y-1">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        <TabsList className="grid w-full grid-cols-2">
+          <TabsTrigger className="cursor-pointer" value="pubmed">
+            {isEnglish ? "PubMed Extraction" : "通过pubmed指令提取"}
+          </TabsTrigger>
+          <TabsTrigger className="cursor-pointer" value="single-cell">
+            {isEnglish ? "Single-Cell Data" : "单细胞数据提取"}
+          </TabsTrigger>
+        </TabsList>
+      </Tabs>
+
+      {uploadedFiles.length > 0 && (
+        <div className="flex flex-wrap gap-2">
+          {uploadedFiles.map((file, index) => (
+            <div key={index} className="flex items-center justify-between bg-muted py-1 px-2 rounded">
+              <File className="w-4 h-4 text-muted-foreground px-2" />
+              <span className="text-sm">{file.name}</span>
+              <Button variant="ghost" size="sm" onClick={() => removeFile(index)} className="cursor-pointer">
+                ×
+              </Button>
+            </div>
+          ))}
+        </div>
+      )}
+
+      <div className="relative">
+        <Textarea
+          ref={textareaRef}
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          onKeyDown={handleKeyPress}
+          placeholder={isEnglish ? "Enter your question or request..." : "请输入您的问题或需求..."}
+          className="h-[120px] pr-20 pb-12 resize-none hide-scrollbar"
+          disabled={isStreaming}
+        />
+
+        {activeTab === "single-cell" && showOptionsButtons && (
+          <div className="absolute bottom-2 left-2 flex gap-2">
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={toggledOptions.cellSurface ? "default" : "outline"}
+                    size="sm"
+                    className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-blue-600 ${toggledOptions.cellSurface ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
+                    onClick={() => handleToggleOption("cellSurface")}
+                    disabled={isStreaming}
+                  >
+                    <Target className="h-3.5 w-3.5 mr-1" />
+                    {isEnglish ? "Cell Surface" : "细胞表面基因"}
+                  </Button>
+                </TooltipTrigger>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={toggledOptions.tcellCompat ? "default" : "outline"}
+                    size="sm"
+                    className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-blue-600 ${toggledOptions.tcellCompat ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
+                    onClick={() => handleToggleOption("tcellCompat")}
+                    disabled={isStreaming}
+                  >
+                    <Shield className="h-3.5 w-3.5 mr-1" />
+                    {isEnglish ? "T Cell" : "T细胞兼容"}
+                  </Button>
+                </TooltipTrigger>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={toggledOptions.offtarget ? "default" : "outline"}
+                    size="sm"
+                    className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-blue-600 ${toggledOptions.offtarget ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
+                    onClick={() => handleToggleOption("offtarget")}
+                    disabled={isStreaming}
+                  >
+                    <Zap className="h-3.5 w-3.5 mr-1" />
+                    {isEnglish ? "Off-target" : "脱靶规避"}
+                  </Button>
+                </TooltipTrigger>
+              </Tooltip>
+            </TooltipProvider>
+
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button
+                    variant={toggledOptions.fdaSafety ? "default" : "outline"}
+                    size="sm"
+                    className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-blue-600 ${toggledOptions.fdaSafety ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
+                    onClick={() => handleToggleOption("fdaSafety")}
+                    disabled={isStreaming}
+                  >
+                    <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
+                    {isEnglish ? "FDA" : "FDA安全"}
+                  </Button>
+                </TooltipTrigger>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+        )}
+
+        <div className="absolute bottom-2 right-2 flex gap-2">
+          {activeTab === "single-cell" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              className={`cursor-pointer ${isStreaming ? "cursor-not-allowed opacity-50" : ""}`}
+              onClick={() => {
+                if (activeTab === "single-cell") {
+                  setShowSteppedUpload(true)
+                } else {
+                  setShowFileUpload(true)
+                }
+              }}
+              disabled={isStreaming}
+            >
+              <Paperclip className="h-4 w-4" />
+            </Button>
+          )}
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Button
+                  onClick={isStreaming ? handleStop : handleSend}
+                  disabled={!isStreaming && !input.trim() && uploadedFiles.length === 0}
+                  size="sm"
+                  variant={isStreaming ? "destructive" : "default"}
+                  className="cursor-pointer"
+                >
+                  {isStreaming ? (
+                    <Square className="h-4 w-4" />
+                  ) : (
+                    <Send className="h-4 w-4" />
+                  )}
+                </Button>
+              </TooltipTrigger>
+              <TooltipContent side="top">
+                {isStreaming ? (isEnglish ? "Stop" : "停止") : isEnglish ? "Send" : "发送"}
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        </div>
+      </div>
+    </div>
+  )
 
   return (
     <div className="flex flex-col min-h-screen max-h-screen relative">
@@ -265,152 +421,7 @@ export function ChatInterface({ conversation, onAddMessage, onCreateConversation
               </p>
             </div>
 
-            <div className="space-y-1">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="pubmed">{isEnglish ? "PubMed Extraction" : "通过pubmed指令提取"}</TabsTrigger>
-                  <TabsTrigger value="single-cell">{isEnglish ? "Single-Cell Data" : "单细胞数据提取"}</TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              {uploadedFiles.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm text-muted-foreground">{isEnglish ? "Uploaded files:" : "已上传文件:"}</p>
-                  {uploadedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between bg-muted p-2 rounded">
-                      <span className="text-sm">{file.name}</span>
-                      <Button variant="ghost" size="sm" onClick={() => removeFile(index)} className="cursor-pointer">
-                        ×
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="relative">
-                <Textarea
-                  ref={textareaRef}
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  placeholder={isEnglish ? "Enter your question or request..." : "请输入您的问题或需求..."}
-                  className="h-[120px] pr-20 pb-12 resize-none overflow-y-auto"
-                  disabled={isStreaming}
-                />
-
-                {activeTab === "single-cell" && (
-                  <div className="absolute bottom-2 left-2 flex gap-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={toggledOptions.cellSurface ? "default" : "outline"}
-                            size="sm"
-                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.cellSurface ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
-                            onClick={() => handleToggleOption("cellSurface")}
-                            disabled={isStreaming}
-                          >
-                            <Target className="h-3.5 w-3.5 mr-1" />
-                            {isEnglish ? "Cell Surface" : "细胞表面基因"}
-                          </Button>
-                        </TooltipTrigger>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={toggledOptions.tcellCompat ? "default" : "outline"}
-                            size="sm"
-                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.tcellCompat ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
-                            onClick={() => handleToggleOption("tcellCompat")}
-                            disabled={isStreaming}
-                          >
-                            <Shield className="h-3.5 w-3.5 mr-1" />
-                            {isEnglish ? "T Cell" : "T细胞兼容"}
-                          </Button>
-                        </TooltipTrigger>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={toggledOptions.offtarget ? "default" : "outline"}
-                            size="sm"
-                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.offtarget ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
-                            onClick={() => handleToggleOption("offtarget")}
-                            disabled={isStreaming}
-                          >
-                            <Zap className="h-3.5 w-3.5 mr-1" />
-                            {isEnglish ? "Off-target" : "脱靶规避"}
-                          </Button>
-                        </TooltipTrigger>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={toggledOptions.fdaSafety ? "default" : "outline"}
-                            size="sm"
-                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.fdaSafety ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
-                            onClick={() => handleToggleOption("fdaSafety")}
-                            disabled={isStreaming}
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                            {isEnglish ? "FDA" : "FDA安全"}
-                          </Button>
-                        </TooltipTrigger>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                )}
-
-                {/* Right bottom corner - File upload and Send */}
-                <div className="absolute bottom-2 right-2 flex gap-2">
-                  {activeTab === "single-cell" && (
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className={`cursor-pointer ${isStreaming ? "cursor-not-allowed opacity-50" : ""}`}
-                      onClick={() => {
-                        if (activeTab === "single-cell") {
-                          setShowSteppedUpload(true)
-                        } else {
-                          setShowFileUpload(true)
-                        }
-                      }}
-                      disabled={isStreaming}
-                    >
-                      <Paperclip className="h-4 w-4" />
-                    </Button>
-                  )}
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Button
-                          onClick={handleSend}
-                          disabled={isStreaming || (!input.trim() && uploadedFiles.length === 0)}
-                          size="sm"
-                          className="cursor-pointer"
-                        >
-                          {isStreaming ? (
-                            <Loader2 className="h-4 w-4 animate-spin bg-primary" />
-                          ) : (
-                            <Send className="h-4 w-4" />
-                          )}
-                        </Button>
-                      </TooltipTrigger>
-                      <TooltipContent side="top">{isEnglish ? "Send" : "发送"}</TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </div>
-              </div>
-            </div>
+            <InputSection showOptionsButtons={true} />
             <QuickStartTemplates onTemplateSelect={handleTemplateSelect} />
           </div>
         </div>
@@ -459,174 +470,10 @@ export function ChatInterface({ conversation, onAddMessage, onCreateConversation
             </div>
           </ScrollArea>
 
-          {/* Bottom input */}
-          <div className="mt-4 px-12 bg-white w-full mx-auto absolute bottom-0">
-            <div className="max-w-4xl mx-auto py-4">
-              <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full mb-4">
-                <TabsList className="grid w-full grid-cols-2">
-                  <TabsTrigger value="pubmed">{isEnglish ? "PubMed Extraction" : "通过pubmed指令提取"}</TabsTrigger>
-                  <TabsTrigger value="single-cell">{isEnglish ? "Single-Cell Data" : "单细胞数据提取"}</TabsTrigger>
-                </TabsList>
-              </Tabs>
-
-              {uploadedFiles.length > 0 && (
-                <div className="mb-4 space-y-2">
-                  <p className="text-sm text-muted-foreground">{isEnglish ? "Uploaded files:" : "已上传文件:"}</p>
-                  {uploadedFiles.map((file, index) => (
-                    <div key={index} className="flex items-center justify-between bg-muted p-2 rounded">
-                      <span className="text-sm">{file.name}</span>
-                      <Button variant="ghost" size="sm" onClick={() => removeFile(index)} className="cursor-pointer">
-                        ×
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              <div className="relative">
-                <Textarea
-                  value={input}
-                  onChange={(e) => setInput(e.target.value)}
-                  onKeyDown={handleKeyPress}
-                  placeholder={
-                    isStreaming
-                      ? isEnglish
-                        ? "Responding..."
-                        : "响应中..."
-                      : isEnglish
-                        ? "Continue conversation..."
-                        : "继续对话..."
-                  }
-                  className="h-[100px] pr-20 pb-12 resize-none overflow-y-auto"
-                />
-
-                {activeTab === "single-cell" && (
-                  <div className="absolute bottom-2 left-2 flex gap-2">
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={toggledOptions.cellSurface ? "default" : "outline"}
-                            size="sm"
-                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.cellSurface ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
-                            onClick={() => handleToggleOption("cellSurface")}
-                            disabled={isStreaming}
-                          >
-                            <Target className="h-3.5 w-3.5 mr-1" />
-                            {isEnglish ? "Cell Surface" : "细胞表面基因"}
-                          </Button>
-                        </TooltipTrigger>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={toggledOptions.tcellCompat ? "default" : "outline"}
-                            size="sm"
-                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.tcellCompat ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
-                            onClick={() => handleToggleOption("tcellCompat")}
-                            disabled={isStreaming}
-                          >
-                            <Shield className="h-3.5 w-3.5 mr-1" />
-                            {isEnglish ? "T Cell" : "T细胞兼容"}
-                          </Button>
-                        </TooltipTrigger>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={toggledOptions.offtarget ? "default" : "outline"}
-                            size="sm"
-                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.offtarget ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
-                            onClick={() => handleToggleOption("offtarget")}
-                            disabled={isStreaming}
-                          >
-                            <Zap className="h-3.5 w-3.5 mr-1" />
-                            {isEnglish ? "Off-target" : "脱靶规避"}
-                          </Button>
-                        </TooltipTrigger>
-                      </Tooltip>
-                    </TooltipProvider>
-
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            variant={toggledOptions.fdaSafety ? "default" : "outline"}
-                            size="sm"
-                            className={`cursor-pointer h-8 px-3 text-xs hover:bg-primary/20 hover:text-gray-500 ${toggledOptions.fdaSafety ? "bg-primary/10 text-blue-500" : "text-gray-500"}`}
-                            onClick={() => handleToggleOption("fdaSafety")}
-                            disabled={isStreaming}
-                          >
-                            <CheckCircle2 className="h-3.5 w-3.5 mr-1" />
-                            {isEnglish ? "FDA" : "FDA安全"}
-                          </Button>
-                        </TooltipTrigger>
-                      </Tooltip>
-                    </TooltipProvider>
-                  </div>
-                )}
-
-                {/* Right bottom corner - File upload and Send/Stop */}
-                <div className="absolute bottom-2 right-2 flex gap-2">
-                  {activeTab === "single-cell" && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        if (activeTab === "single-cell") {
-                          setShowSteppedUpload(true)
-                        } else {
-                          setShowFileUpload(true)
-                        }
-                      }}
-                      disabled={isStreaming}
-                      className={`${isStreaming ? "cursor-not-allowed" : "cursor-pointer"}`}
-                    >
-                      <Paperclip className="h-4 w-4" />
-                    </Button>
-                  )}
-
-                  {isStreaming ? (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            onClick={handleStop}
-                            variant="destructive"
-                            size="sm"
-                            className="cursor-pointer bg-primary hover:bg-primary"
-                          >
-                            <Square className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">{isEnglish ? "Stop" : "停止"}</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  ) : (
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <Button
-                            onClick={handleSend}
-                            disabled={!input.trim() && uploadedFiles.length === 0}
-                            size="sm"
-                            className={"cursor-pointer"}
-                          >
-                            <Send className="h-4 w-4" />
-                          </Button>
-                        </TooltipTrigger>
-                        <TooltipContent side="top">{isEnglish ? "Send" : "发送"}</TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
-                  )}
-                </div>
-              </div>
+          {/* Bottom input - fixed position */}
+          <div className="fixed bottom-0 left-0 right-0 bg-white border-t">
+            <div className="max-w-4xl mx-auto px-12 py-4">
+              <InputSection showOptionsButtons={true} />
             </div>
           </div>
         </>
