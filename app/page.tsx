@@ -9,8 +9,10 @@ import { useIsEnglish } from "@/hooks/use-is-english";
 import FingerprintJS from "@fingerprintjs/fingerprintjs";
 import { useConversationHistory } from "@/hooks/use-conversation-history";
 import { APP_CONFIG } from "@/config";
-import { OAuth2PasswordRequestForm, UserCredential } from '@/types/auth';
+import { OAuth2PasswordRequestForm } from '@/types/auth';
 import { signIn } from "@/service/auth";
+import { CreateConversationRequest } from "@/types/conversation";
+import { createConversation } from "@/service/conversation";
 
 export default function HomePage() {
   const isEnglish = useIsEnglish();
@@ -20,11 +22,22 @@ export default function HomePage() {
     setSidebarOpen(!sidebarOpen);
   };
 
+  const handleNewChat = () => {
+    const title = isEnglish ? "New Conversation" : "新建会话"
+    const req: CreateConversationRequest = {
+      conversation: {
+        title: title,
+      }
+    }
+    createConversation(req).then(res => {
+      localStorage.setItem(APP_CONFIG.STORAGE_KEYS.CONCERSATION_ID, res.id)
+    })
+  }
+
   const {
     conversations,
     currentConversationId,
     isLoading,
-    createConversation,
     updateConversation,
     addMessageToConversation,
     deleteConversation,
@@ -35,7 +48,6 @@ export default function HomePage() {
     getCurrentConversation,
     getConversationStats,
     setCurrentConversationId,
-    loadDemoData, // Export the new loadDemoData function
   } = useConversationHistory();
 
   useEffect(() => {
@@ -49,7 +61,7 @@ export default function HomePage() {
             username: fingerprint,
             password: ""
           }
-          signIn(loginData).then(res => localStorage.setItem(APP_CONFIG.STORAGE_KEYS.AUTH, res.access_token))
+          signIn(loginData).then(res => localStorage.setItem(APP_CONFIG.STORAGE_KEYS.AUTH, JSON.stringify(res)))
         })
         .catch((error) => {
           console.error("Failed to get fingerprint:", error);
@@ -60,7 +72,16 @@ export default function HomePage() {
   useEffect(() => {
     const conversationId = localStorage.getItem(APP_CONFIG.STORAGE_KEYS.CONCERSATION_ID);
     if (conversationId === null || conversationId === undefined) {
-      
+      const title = isEnglish ? "New Conversation" : "新建会话"
+      const req: CreateConversationRequest = {
+        conversation: {
+          title: title,
+          is_default: 1
+        }
+      }
+      createConversation(req).then(res => {
+        localStorage.setItem(APP_CONFIG.STORAGE_KEYS.CONCERSATION_ID, res.id)
+      })
     }
   })
 
@@ -91,7 +112,7 @@ export default function HomePage() {
           <Button
             variant="outline"
             size="icon"
-            onClick={createConversation}
+            onClick={handleNewChat}
             className="bg-background/80 backdrop-blur-sm cursor-pointer border-none scale-120 text-gray-600 hover:text-gray-700"
             title={isEnglish ? "New Conversation" : "新建会话"}
           >
@@ -114,7 +135,7 @@ export default function HomePage() {
             conversations={conversations}
             currentConversationId={currentConversationId}
             onSelectConversation={setCurrentConversationId}
-            onCreateConversation={createConversation}
+            onCreateConversation={handleNewChat}
             onDeleteConversation={deleteConversation}
             onStarConversation={starConversation}
             onRenameConversation={renameConversation}
