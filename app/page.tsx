@@ -76,7 +76,6 @@ export default function HomePage() {
       const req: CreateConversationRequest = {
         conversation: {
           title: title,
-          is_default: 1
         }
       }
       createConversation(req).then(res => {
@@ -127,7 +126,7 @@ export default function HomePage() {
         ${sidebarOpen ? "w-80" : "w-0"}
         h-full bg-card border-r border-border
         transition-all duration-300 ease-in-out
-        overflow-hidden
+        overflow-hidden bg-gray-50/80
       `}
       >
         {sidebarOpen && (

@@ -18,7 +18,7 @@ import { useConversationHistory } from "@/hooks/use-conversation-history"
 import { useIsEnglish } from "@/hooks/use-is-english"
 import { useSSEStream } from "@/hooks/use-sse-stream"
 import type { Conversation } from "@/types/chat"
-import { Bot, Loader2, Paperclip, Send, Square, User, Zap, Shield, Target, CheckCircle2 } from 'lucide-react'
+import { Bot, Paperclip, Send, Square, User, Zap, Shield, Target, CheckCircle2 } from 'lucide-react'
 import { useEffect, useRef, useState } from "react"
 import workflowData from "@/data/example-workflow.json"
 
@@ -117,6 +117,7 @@ export function ChatInterface({ conversation, onAddMessage, onCreateConversation
     }
   }
 
+  // 
   const handleSend = async () => {
     if (!input.trim() && uploadedFiles.length === 0) return
     if (isStreaming) return
