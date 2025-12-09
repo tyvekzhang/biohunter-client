@@ -11,8 +11,9 @@ import { useConversationHistory } from "@/hooks/use-conversation-history";
 import { APP_CONFIG } from "@/config";
 import { OAuth2PasswordRequestForm } from '@/types/auth';
 import { signIn } from "@/service/auth";
-import { CreateConversationRequest } from "@/types/conversation";
-import { createConversation } from "@/service/conversation";
+import { CreateConversationRequest, ListConversationsRequest } from "@/types/conversation";
+import { createConversation, useConversations } from "@/service/conversation";
+import { createPaginationRequest } from "@/types";
 
 export default function HomePage() {
   const isEnglish = useIsEnglish();
@@ -34,11 +35,24 @@ export default function HomePage() {
     })
   }
 
+  const [current, setCurrent] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+
+  const [conversationQueryParams, setConversationQueryParams] = useState<ListConversationsRequest>();
+
+  // 用 useConversations 获取菜单列表数据
   const {
     conversations,
-    currentConversationId,
+    total,
     isLoading,
-    updateConversation,
+    mutateConversations,
+  } = useConversations({
+    ...conversationQueryParams,
+    ...createPaginationRequest(current, pageSize),
+  });
+
+  const {
+    currentConversationId,
     addMessageToConversation,
     deleteConversation,
     starConversation,
@@ -83,6 +97,9 @@ export default function HomePage() {
       })
     }
   })
+  if (conversations === null || conversations === undefined) {
+    return null
+  }
 
   return (
     <div className="flex h-screen bg-background">

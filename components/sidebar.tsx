@@ -233,8 +233,8 @@ export function Sidebar({
         {/* Stats */}
         <div className="flex items-center p-4 gap-4 mt-3 text-xs text-muted-foreground py-2 justify-between">
           <div className="flex items-center gap-4 ">
-            <span>
-              {isEnglish ? "Total" : "总计"}: {stats.total}
+            <span className="text-sm">
+              {isEnglish ? "Historical dialogue" : "历史对话"}
             </span>
             {stats.starred > 0 && (
               <span>
